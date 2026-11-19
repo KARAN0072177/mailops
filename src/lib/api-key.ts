@@ -13,7 +13,7 @@ export function generateApiKey(): string {
 
 // Extract the identifiable prefix from an API key.
 export function getKeyPrefix(apiKey: string): string {
-  return apiKey.slice(0, 16);
+  return apiKey.slice(0, 25);
 }
 
 // Hash an API key using HMAC-SHA256.

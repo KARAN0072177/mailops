@@ -35,6 +35,8 @@ const applicationSchema = new Schema(
   }
 );
 
+applicationSchema.index({ keyPrefix: 1 });
+
 export type ApplicationDocument = InferSchemaType<
   typeof applicationSchema
 >;
