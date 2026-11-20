@@ -1,0 +1,30 @@
+
+services:
+  mailops-redis:
+    image: redis:7-alpine
+    container_name: mailops-redis
+    restart: unless-stopped
+
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+
+    ports:
+      - "127.0.0.1:6380:6379"
+
+    volumes:
+      - mailops-redis-data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  mailops-redis-data:
+    name: mailops-redis-data

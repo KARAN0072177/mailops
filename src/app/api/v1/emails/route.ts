@@ -3,7 +3,10 @@ import { NextResponse } from "next/server";
 
 import { authenticateRequest } from "@/lib/request-auth";
 import { emailRequestSchema } from "@/schemas/email.schema";
-import { createEmailRecord } from "@/services/email.service";
+import {
+  createEmailRecord,
+  EmailQueueError,
+} from "@/services/email.service";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. Parse the incoming JSON.
+    // 2. Parse incoming JSON.
     let requestBody: unknown;
 
     try {
@@ -38,7 +41,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Validate the request using Zod.
+    // 3. Validate request using Zod.
     const validation = emailRequestSchema.safeParse(requestBody);
 
     if (!validation.success) {
@@ -55,23 +58,40 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Create the email record in MongoDB.
+    // 4. Save the email and enqueue its job.
     const email = await createEmailRecord(
       validation.data,
       application
     );
 
-    // 5. Return the created email information.
+    // 5. Confirm that Mailops accepted the email for processing.
     return NextResponse.json(
       {
         success: true,
-        message: "Email record created successfully.",
+        message: "Email accepted for processing.",
         email,
       },
-      { status: 201 }
+      {
+        status: 202,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
     );
   } catch (error) {
-    console.error("Email submission failed:", error);
+    // Handle Redis / BullMQ enqueue failures separately.
+    if (error instanceof EmailQueueError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email was saved but could not be queued.",
+          emailId: error.emailId,
+        },
+        { status: 503 }
+      );
+    }
+
+    console.error("[Mailops] Email submission failed:", error);
 
     return NextResponse.json(
       {
