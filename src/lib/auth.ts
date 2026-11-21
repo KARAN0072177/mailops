@@ -1,7 +1,9 @@
+
 import "server-only";
 import "./mongo-dns";
 
 import { betterAuth } from "better-auth";
+import { organization } from "better-auth/plugins";
 import { mongodbAdapter } from "@better-auth/mongo-adapter";
 import { MongoClient } from "mongodb";
 
@@ -38,7 +40,7 @@ const database = client.db("mailops");
 
 // Better Auth configuration
 export const auth = betterAuth({
-  database: mongodbAdapter(database),
+  database: mongodbAdapter(database, { client }),
 
   secret: getRequiredEnv("BETTER_AUTH_SECRET"),
   baseURL: getRequiredEnv("BETTER_AUTH_URL"),
@@ -50,4 +52,11 @@ export const auth = betterAuth({
       requireEmailVerification: true,
     },
   },
+
+  plugins: [
+    organization({
+      creatorRole: "owner",
+      allowUserToCreateOrganization: true,
+    }),
+  ],
 });
